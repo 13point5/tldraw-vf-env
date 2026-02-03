@@ -6,7 +6,8 @@ version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
     "verifiers>=0.1.9.post3",
-    "pydantic>=2.0.0",
+    "playwright>=1.43.0",
+    "datasets>=2.0.0",
 ]
 
 [build-system]
@@ -14,7 +15,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["tldraw.py", "pyproject.toml", "tldraw_shapes/**/*.py"]
+include = ["tldraw.py", "pyproject.toml"]
 
 [tool.verifiers.eval]
 num_examples = 5
