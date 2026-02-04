@@ -73,6 +73,7 @@ async function* streamActions(
 
   const messages = buildMessages(prompt, modelName);
   const systemPrompt = buildSystemPrompt(prompt);
+  console.log("systemPrompt:", systemPrompt);
 
   try {
     messages.push({

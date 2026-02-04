@@ -1,8 +1,9 @@
 import { Editor, TLImageExportOptions } from 'tldraw'
 import { AgentHelpers } from '../../shared/AgentHelpers'
 import { convertTldrawShapeToSimpleShape } from '../../shared/format/convertTldrawShapeToSimpleShape'
-import { buildResponseSchema } from '../../worker/prompt/buildResponseSchema'
+import { buildSystemPrompt } from '../../worker/prompt/buildSystemPrompt'
 import { AgentAction } from '../../shared/types/AgentAction'
+import { AgentPrompt } from '../../shared/types/AgentPrompt'
 import { Streaming } from '../../shared/types/Streaming'
 import { TldrawAgent } from '../agent/TldrawAgent'
 
@@ -167,12 +168,15 @@ export function attachValidatorBridge(editor: Editor, agent: TldrawAgent) {
 		}
 	}
 
-	const getResponseSchema = () => buildResponseSchema()
+	const getSystemPrompt = () => {
+		const prompt = { system: { type: 'system' } } as AgentPrompt
+		return buildSystemPrompt(prompt)
+	}
 
 	;(window as any).__tldrawValidator = {
 		reset,
 		validate,
-		getResponseSchema,
+		getSystemPrompt,
 	}
 }
 

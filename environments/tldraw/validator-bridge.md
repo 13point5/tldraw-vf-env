@@ -27,8 +27,8 @@ Core files:
 
 1. Start the tldraw agent dev server. This serves `validator.html` at `http://localhost:5173/validator.html`.
 2. The Verifiers environment starts Playwright and opens the validator page.
-3. The validator page exposes `window.__tldrawValidator` with methods: `reset`, `validate`, `getResponseSchema`.
-4. The environment fetches the response schema from the page and bakes it into the system prompt.
+3. The validator page exposes `window.__tldrawValidator` with methods: `reset`, `validate`, `getSystemPrompt`.
+4. The environment fetches the system prompt directly from the page using a short-lived Playwright session.
 5. For each model completion, the environment parses JSON and sends `actions` to `validate`.
 6. The validator applies actions through the real tldraw agent harness, renders shapes, and returns structured results.
 7. The rubric uses the validator response to decide success and logs images/errors to disk.
@@ -42,12 +42,10 @@ Defined in `client/validator/bridge.ts` and attached in `ValidatorApp.tsx`.
 - Clears all shapes from the current page.
 - Resets agent state.
 
-### `window.__tldrawValidator.getResponseSchema()`
+### `window.__tldrawValidator.getSystemPrompt()`
 
-- Returns the JSON schema for agent responses.
-- Built from the live action utils list via `buildResponseSchema()`.
-
-This is how the Verifiers environment stays in lockstep with the actual tldraw agent action schema.
+- Returns the exact system prompt string used by the tldraw agent runtime.
+- Built with `buildSystemPrompt(...)`, so it stays aligned to any prompt-part or action-level additions.
 
 ### `window.__tldrawValidator.validate(actions, imageOptions?)`
 
@@ -74,12 +72,11 @@ Key steps inside `validate`:
 
 ## Verifiers environment: Playwright client
 
-`ValidatorClient` in `tldraw.py` manages a pool of Playwright pages:
+`ValidatorClient` in `tldraw.py` manages a pool of Playwright pages for validation:
 
 - Launches Chromium and opens `validator_url` (default `http://localhost:5173/validator.html`).
 - Waits for `window.__tldrawValidator.validate` to exist.
 - Provides:
-  - `get_response_schema()` → calls `getResponseSchema` in the page
   - `validate(actions, screenshot_path?)` → calls `validate` in the page
 
 Image handling behavior in Python:
@@ -96,8 +93,7 @@ Error logging:
 
 In `tldraw.py`:
 
-- `safe_fetch_schema()` calls `get_response_schema` (outside an existing event loop).
-- `build_system_prompt(schema)` inserts the live schema into the system prompt.
+- `safe_fetch_system_prompt()` loads the validator page in a short-lived Playwright session to fetch the system prompt before validation begins.
 - `render_and_score(...)`:
   - Parses model output JSON.
   - Extracts `actions`.
@@ -155,7 +151,7 @@ uv run playwright install
 ## Notes and troubleshooting
 
 - The validator page must be reachable before the Verifiers environment starts.
-- If schema fetch fails, the system prompt will fall back to an empty schema.
+- If system prompt fetch fails, environment load will fail.
 - Validation errors are surfaced in `state["render"]` and optionally persisted to JSONL.
 
 ## Extension points
