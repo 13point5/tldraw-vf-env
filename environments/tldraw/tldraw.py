@@ -224,6 +224,7 @@ This is the JSON schema for the events you can return. You must conform to this 
 <<SCHEMA_JSON>>
 """
 
+
 class ValidatorClient:
     def __init__(
         self,
@@ -267,9 +268,7 @@ class ValidatorClient:
                 if self.save_screenshots:
                     self._run_dir = Path(self.screenshot_dir) / run_tag
                     self._run_dir.mkdir(parents=True, exist_ok=True)
-                    logging.getLogger(__name__).info(
-                        "Saving rendered images to %s", self._run_dir
-                    )
+                    logging.getLogger(__name__).info("Saving rendered images to %s", self._run_dir)
                 if self.log_errors:
                     error_dir = Path(self.error_log_dir) / run_tag
                     error_dir.mkdir(parents=True, exist_ok=True)
@@ -329,9 +328,7 @@ class ValidatorClient:
             return None
 
     def _decode_data_url(self, data_url: str) -> tuple[str, bytes] | None:
-        base64_match = re.match(
-            r"^data:image/([^;]+);base64,(.+)$", data_url, re.DOTALL
-        )
+        base64_match = re.match(r"^data:image/([^;]+);base64,(.+)$", data_url, re.DOTALL)
         if base64_match:
             ext = base64_match.group(1)
             payload = base64_match.group(2)
@@ -412,7 +409,9 @@ class ValidatorClient:
                             }
                         )
             if self.save_screenshots and not result.get("image_source"):
-                target = Path(screenshot_path) if screenshot_path else self._build_screenshot_path("png")
+                target = (
+                    Path(screenshot_path) if screenshot_path else self._build_screenshot_path("png")
+                )
                 try:
                     await page.screenshot(path=str(target), full_page=True)
                     if not isinstance(result.get("image"), dict):
@@ -430,6 +429,7 @@ class ValidatorClient:
             return result
         return {"errors": [{"message": "No validator page available"}]}
 
+
 def build_system_prompt(schema: dict[str, Any]) -> str:
     bullets = "\n".join(
         [f"- **{shape[:1].upper() + shape[1:]} (`{shape}`)**" for shape in SHAPE_TYPES]
@@ -441,6 +441,7 @@ def build_system_prompt(schema: dict[str, Any]) -> str:
         .replace("<<SHAPES_INLINE>>", inline)
         .replace("<<SCHEMA_JSON>>", schema_json)
     )
+
 
 def parse_response_json(text: str) -> tuple[dict[str, Any] | None, str | None]:
     try:
@@ -458,6 +459,7 @@ def parse_response_json(text: str) -> tuple[dict[str, Any] | None, str | None]:
     except json.JSONDecodeError as exc:
         return None, f"Invalid JSON: {exc}"
 
+
 def safe_fetch_schema(validator: ValidatorClient) -> dict[str, Any]:
     try:
         asyncio.get_running_loop()
@@ -470,6 +472,7 @@ def safe_fetch_schema(validator: ValidatorClient) -> dict[str, Any]:
         return asyncio.run(validator.get_response_schema())
     except Exception:
         return {}
+
 
 async def render_and_score(
     completion,
@@ -535,8 +538,8 @@ async def render_and_score(
     state["actions"] = actions
     return 1.0 if not result.get("errors") else 0.0
 
+
 def load_environment(
-    num_examples: int = 5,
     validator_url: str = "http://localhost:5173/validator.html",
     pool_size: int = 2,
     headless: bool = True,
@@ -552,8 +555,6 @@ def load_environment(
     error_log_dir: str = "outputs/errors",
 ) -> vf.Environment:
     prompts = get_example_prompts()
-    if num_examples > 0:
-        prompts = prompts[:num_examples]
 
     dataset = Dataset.from_list([{"question": prompt} for prompt in prompts])
 

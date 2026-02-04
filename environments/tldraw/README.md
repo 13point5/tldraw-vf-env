@@ -32,6 +32,7 @@ prime eval run tldraw   -m gpt-4.1-mini   -n 20 -r 3 -t 1024 -T 0.7   -a '{"key"
 
 Notes:
 - Use `-a` / `--env-args` to pass environment-specific configuration as a JSON object.
+- Use `-n` / `--num-examples` to control how many dataset examples are evaluated.
 
 ### Environment Arguments
 Document any supported environment arguments and their meaning. Example:
@@ -48,4 +49,3 @@ Summarize key metrics your rubric emits and how they’re interpreted.
 | ------ | ------- |
 | `reward` | Main scalar reward (weighted sum of criteria) |
 | `accuracy` | Exact match on target answer |
-
