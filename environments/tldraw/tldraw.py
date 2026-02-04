@@ -1,7 +1,14 @@
 import asyncio
+import base64
 import json
+import logging
+import re
+import uuid
+from datetime import datetime
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import verifiers as vf
 from datasets import Dataset
@@ -224,16 +231,28 @@ class ValidatorClient:
         pool_size: int = 2,
         headless: bool = True,
         timeout_ms: int = 15000,
+        save_screenshots: bool = True,
+        screenshot_dir: str = "outputs/screenshots",
+        image_options: dict[str, Any] | None = None,
+        log_errors: bool = True,
+        error_log_dir: str = "outputs/errors",
     ) -> None:
         self.url = url
         self.pool_size = pool_size
         self.headless = headless
         self.timeout_ms = timeout_ms
+        self.save_screenshots = save_screenshots
+        self.screenshot_dir = screenshot_dir
+        self.image_options = image_options
+        self.log_errors = log_errors
+        self.error_log_dir = error_log_dir
         self._playwright = None
         self._browser = None
         self._queue: asyncio.Queue = asyncio.Queue()
         self._lock = asyncio.Lock()
         self._started = False
+        self._run_dir: Path | None = None
+        self._error_log_path: Path | None = None
 
     async def start(self) -> None:
         if self._started:
@@ -241,6 +260,23 @@ class ValidatorClient:
         async with self._lock:
             if self._started:
                 return
+            if self.save_screenshots or self.log_errors:
+                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                run_id = uuid.uuid4().hex[:8]
+                run_tag = f"run_{timestamp}_{run_id}"
+                if self.save_screenshots:
+                    self._run_dir = Path(self.screenshot_dir) / run_tag
+                    self._run_dir.mkdir(parents=True, exist_ok=True)
+                    logging.getLogger(__name__).info(
+                        "Saving rendered images to %s", self._run_dir
+                    )
+                if self.log_errors:
+                    error_dir = Path(self.error_log_dir) / run_tag
+                    error_dir.mkdir(parents=True, exist_ok=True)
+                    self._error_log_path = error_dir / "errors.jsonl"
+                    logging.getLogger(__name__).info(
+                        "Logging validator errors to %s", self._error_log_path
+                    )
             self._playwright = await async_playwright().start()
             self._browser = await self._playwright.chromium.launch(headless=self.headless)
             for _ in range(self.pool_size):
@@ -274,12 +310,124 @@ class ValidatorClient:
             return await page.evaluate("() => window.__tldrawValidator.getResponseSchema()")
         return {}
 
-    async def validate(self, actions: list[dict[str, Any]]) -> dict[str, Any]:
+    def _build_screenshot_path(self, ext: str) -> Path:
+        if self._run_dir is None:
+            directory = Path(self.screenshot_dir)
+            directory.mkdir(parents=True, exist_ok=True)
+            return directory / f"render_{uuid.uuid4().hex}.{ext}"
+        return self._run_dir / f"render_{uuid.uuid4().hex}.{ext}"
+
+    def log_error_payload(self, payload: dict[str, Any]) -> str | None:
+        if not self.log_errors or self._error_log_path is None:
+            return None
+        try:
+            with self._error_log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload) + "\n")
+            return str(self._error_log_path)
+        except Exception:
+            logging.getLogger(__name__).exception("Failed to write error log")
+            return None
+
+    def _decode_data_url(self, data_url: str) -> tuple[str, bytes] | None:
+        base64_match = re.match(
+            r"^data:image/([^;]+);base64,(.+)$", data_url, re.DOTALL
+        )
+        if base64_match:
+            ext = base64_match.group(1)
+            payload = base64_match.group(2)
+            return ext, base64.b64decode(payload)
+
+        utf8_match = re.match(r"^data:image/([^;]+);utf8,(.+)$", data_url, re.DOTALL)
+        if utf8_match:
+            ext = utf8_match.group(1)
+            payload = unquote(utf8_match.group(2))
+            return ext, payload.encode("utf-8")
+
+        return None
+
+    def _save_data_url(self, data_url: str) -> str | None:
+        decoded = self._decode_data_url(data_url)
+        if not decoded:
+            return None
+        ext, payload = decoded
+        target = self._build_screenshot_path(ext)
+        with target.open("wb") as handle:
+            handle.write(payload)
+        return str(target)
+
+    def _write_data_url(self, data_url: str, target: Path) -> bool:
+        decoded = self._decode_data_url(data_url)
+        if not decoded:
+            return False
+        _, payload = decoded
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("wb") as handle:
+            handle.write(payload)
+        return True
+
+    async def validate(
+        self, actions: list[dict[str, Any]], screenshot_path: str | None = None
+    ) -> dict[str, Any]:
         async with self._with_page() as page:
             await page.evaluate("() => window.__tldrawValidator.reset()")
-            return await page.evaluate(
-                "(actions) => window.__tldrawValidator.validate(actions)", actions
+            image_options = self.image_options if self.save_screenshots else None
+            result = await page.evaluate(
+                "(payload) => window.__tldrawValidator.validate(payload.actions, payload.options)",
+                {"actions": actions, "options": image_options},
             )
+            image_payload = result.get("image")
+            if image_payload and isinstance(image_payload, dict):
+                data_url = image_payload.get("url")
+                if screenshot_path:
+                    if data_url and self._write_data_url(data_url, Path(screenshot_path)):
+                        image_payload.pop("url", None)
+                        image_payload["path"] = screenshot_path
+                        result["image_source"] = "tldraw_export"
+                    else:
+                        result.setdefault("errors", []).append(
+                            {
+                                "stage": "export",
+                                "message": "Image export failed: unable to save data URL",
+                            }
+                        )
+                elif self.save_screenshots:
+                    if data_url:
+                        saved = self._save_data_url(data_url)
+                        if saved:
+                            image_payload.pop("url", None)
+                            image_payload["path"] = saved
+                            result["image_source"] = "tldraw_export"
+                        else:
+                            result.setdefault("errors", []).append(
+                                {
+                                    "stage": "export",
+                                    "message": "Image export failed: unsupported data URL",
+                                }
+                            )
+                    else:
+                        result.setdefault("errors", []).append(
+                            {
+                                "stage": "export",
+                                "message": "Image export failed: missing data URL",
+                            }
+                        )
+            if self.save_screenshots and not result.get("image_source"):
+                target = Path(screenshot_path) if screenshot_path else self._build_screenshot_path("png")
+                try:
+                    await page.screenshot(path=str(target), full_page=True)
+                    if not isinstance(result.get("image"), dict):
+                        result["image"] = {}
+                    result["image"]["path"] = str(target)
+                    result["image_source"] = "page_screenshot"
+                except Exception as exc:
+                    result.setdefault("errors", []).append(
+                        {"stage": "fallback", "message": f"Fallback screenshot failed: {exc}"}
+                    )
+            if self._run_dir is not None:
+                result["image_dir"] = str(self._run_dir)
+            if self._error_log_path is not None:
+                result["error_log_path"] = str(self._error_log_path)
+            return result
         return {"errors": [{"message": "No validator page available"}]}
 
 def build_system_prompt(schema: dict[str, Any]) -> str:
@@ -310,7 +458,25 @@ def parse_response_json(text: str) -> tuple[dict[str, Any] | None, str | None]:
     except json.JSONDecodeError as exc:
         return None, f"Invalid JSON: {exc}"
 
-async def render_and_score(completion, state: vf.State, validator: ValidatorClient | None = None) -> float:
+def safe_fetch_schema(validator: ValidatorClient) -> dict[str, Any]:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        return {}
+
+    try:
+        return asyncio.run(validator.get_response_schema())
+    except Exception:
+        return {}
+
+async def render_and_score(
+    completion,
+    state: vf.State,
+    prompt=None,
+    validator: ValidatorClient | None = None,
+) -> float:
     if validator is None:
         validator = state.get("validator")
 
@@ -333,7 +499,38 @@ async def render_and_score(completion, state: vf.State, validator: ValidatorClie
         state["render"] = {"errors": [{"message": "Validator client not available"}]}
         return 0.0
 
-    result = await validator.validate(actions)
+    try:
+        result = await validator.validate(actions)
+    except Exception as exc:
+        state["render"] = {"errors": [{"message": f"Validator failed: {exc}"}]}
+        return 0.0
+
+    if result.get("errors") or result.get("action_errors"):
+        if result.get("errors"):
+            logging.getLogger(__name__).warning("Validator errors: %s", result["errors"])
+        if result.get("action_errors"):
+            logging.getLogger(__name__).warning(
+                "Validator action errors: %s", result["action_errors"]
+            )
+        user_prompt = None
+        if isinstance(prompt, list):
+            for message in reversed(prompt):
+                if message.get("role") == "user":
+                    user_prompt = message.get("content")
+                    break
+        payload = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "errors": result.get("errors"),
+            "action_errors": result.get("action_errors"),
+            "user_prompt": user_prompt,
+            "actions": actions,
+            "image": result.get("image"),
+            "image_dir": result.get("image_dir"),
+            "image_source": result.get("image_source"),
+        }
+        error_log_path = validator.log_error_payload(payload)
+        if error_log_path:
+            result["error_log_path"] = error_log_path
     state["render"] = result
     state["actions"] = actions
     return 1.0 if not result.get("errors") else 0.0
@@ -343,6 +540,16 @@ def load_environment(
     validator_url: str = "http://localhost:5173/validator.html",
     pool_size: int = 2,
     headless: bool = True,
+    save_screenshots: bool = True,
+    screenshot_dir: str = "outputs/screenshots",
+    image_format: str = "png",
+    image_background: bool = True,
+    image_pixel_ratio: float = 2,
+    image_padding: int = 32,
+    image_quality: float | None = None,
+    image_dark_mode: bool | None = None,
+    log_errors: bool = True,
+    error_log_dir: str = "outputs/errors",
 ) -> vf.Environment:
     prompts = get_example_prompts()
     if num_examples > 0:
@@ -350,16 +557,31 @@ def load_environment(
 
     dataset = Dataset.from_list([{"question": prompt} for prompt in prompts])
 
+    image_options: dict[str, Any] | None = None
+    if save_screenshots:
+        image_options = {
+            "format": image_format,
+            "background": image_background,
+            "pixelRatio": image_pixel_ratio,
+            "padding": image_padding,
+        }
+        if image_quality is not None:
+            image_options["quality"] = image_quality
+        if image_dark_mode is not None:
+            image_options["darkMode"] = image_dark_mode
+
     validator = ValidatorClient(
         url=validator_url,
         pool_size=pool_size,
         headless=headless,
+        save_screenshots=save_screenshots,
+        screenshot_dir=screenshot_dir,
+        image_options=image_options,
+        log_errors=log_errors,
+        error_log_dir=error_log_dir,
     )
 
-    try:
-        schema = asyncio.run(validator.get_response_schema())
-    except Exception:
-        schema = {}
+    schema = safe_fetch_schema(validator)
 
     system_prompt = build_system_prompt(schema)
 

@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+/*/node_modules
+.yarn/
+
+# Build output
+/dist/
+.tsbuild/
+
+# Cloudflare / wrangler
+.wrangler/
+
+# Env files
+.dev.vars
+*.dev.vars
+.env
+.env.*
+
+# Logs / temp
+*.log
+.tmp/
+
+# OS
+.DS_Store
+
+# Tooling
+.claude/
