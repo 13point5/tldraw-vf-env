@@ -153,6 +153,7 @@ uv run playwright install
 - The validator page must be reachable before the Verifiers environment starts.
 - If system prompt fetch fails, environment load will fail.
 - Validation errors are surfaced in `state["render"]` and optionally persisted to JSONL.
+- The environment does not start the validator server; ensure your deployed app is available at `validator_url`.
 
 ## Extension points
 
