@@ -14,6 +14,7 @@ from bootstrap_env import (
     ensure_validator_server,
     run_blocking,
 )
+from system_prompt import SYSTEM_PROMPT
 from validator_client import ValidatorClient
 
 
@@ -32,6 +33,7 @@ def parse_response_json(text: str) -> tuple[dict[str, Any] | None, str | None]:
         return json.loads(text[start : end + 1]), None
     except json.JSONDecodeError as exc:
         return None, f"Invalid JSON: {exc}"
+
 
 async def render_and_score(
     completion,
@@ -118,6 +120,7 @@ async def render_and_score(
     state["actions"] = actions
     return 1.0 if not has_errors else 0.0
 
+
 def load_environment(
     validator_url: str = "http://localhost:5173/validator.html",
     pool_size: int = 5,
@@ -137,14 +140,6 @@ def load_environment(
     run_blocking(ensure_tldraw_agent_deps, agent_dir)
     run_blocking(ensure_validator_server, validator_url, agent_dir, 60000)
 
-    prompt_path = Path(__file__).resolve().parent / "system_prompt.txt"
-    if not prompt_path.exists():
-        raise RuntimeError(
-            "System prompt file not found at environments/tldraw/system_prompt.txt. "
-            "Provide a fixed system prompt file before running the environment."
-        )
-    system_prompt = prompt_path.read_text(encoding="utf-8")
-
     validator = ValidatorClient(
         url=validator_url,
         pool_size=pool_size,
@@ -161,5 +156,5 @@ def load_environment(
     return vf.SingleTurnEnv(
         dataset=dataset,
         rubric=rubric,
-        system_prompt=system_prompt,
+        system_prompt=SYSTEM_PROMPT,
     )

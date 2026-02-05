@@ -1,6 +1,6 @@
 [project]
 name = "tldraw"
-description = "Your environment description here"
+description = "Single-turn tool-use environment that validates tldraw actions via a local UI."
 tags = ["placeholder-tag", "train", "eval"]
 version = "0.1.0"
 requires-python = ">=3.10"
@@ -19,8 +19,40 @@ include = [
     "tldraw.py",
     "bootstrap_env.py",
     "dataset.py",
+    "system_prompt.py",
     "validator_client.py",
-    "system_prompt.txt",
+    "tldraw-agent/**",
+    "pyproject.toml",
+]
+exclude = [
+    "tldraw-agent/node_modules/**",
+    "tldraw-agent/dist/**",
+    "tldraw-agent/.vite/**",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "tldraw.py",
+    "bootstrap_env.py",
+    "dataset.py",
+    "system_prompt.py",
+    "validator_client.py",
+    "tldraw-agent/**",
+    "pyproject.toml",
+]
+exclude = [
+    "tldraw-agent/node_modules/**",
+    "tldraw-agent/dist/**",
+    "tldraw-agent/.vite/**",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "tldraw.py",
+    "bootstrap_env.py",
+    "dataset.py",
+    "system_prompt.py",
+    "validator_client.py",
     "tldraw-agent/**",
     "pyproject.toml",
 ]

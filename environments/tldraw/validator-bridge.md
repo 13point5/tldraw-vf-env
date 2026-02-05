@@ -28,7 +28,7 @@ Core files:
 1. If `validator_url` points to localhost, the environment starts the tldraw agent dev server. This serves `validator.html` at `http://localhost:5173/validator.html`.
 2. The Verifiers environment starts Playwright and opens the validator page.
 3. The validator page exposes `window.__tldrawValidator` with methods: `reset`, `validate`, `getSystemPrompt`.
-4. The environment reads a fixed system prompt from `environments/tldraw/system_prompt.txt`.
+4. The environment reads a fixed system prompt from `environments/tldraw/system_prompt.py`.
 5. For each model completion, the environment parses JSON and sends `actions` to `validate`.
 6. The validator applies actions through the real tldraw agent harness, renders shapes, and returns structured results.
 7. The rubric uses the validator response to decide success and logs images/errors to disk.
@@ -46,7 +46,7 @@ Defined in `client/validator/bridge.ts` and attached in `ValidatorApp.tsx`.
 
 - Returns the exact system prompt string used by the tldraw agent runtime.
 - Built with `buildSystemPrompt(...)`, so it stays aligned to any prompt-part or action-level additions.
-- Useful to generate and save the fixed `environments/tldraw/system_prompt.txt` used by the env.
+- Useful to generate and save the fixed `environments/tldraw/system_prompt.py` used by the env.
 
 ### `window.__tldrawValidator.validate(actions, imageOptions?)`
 
@@ -94,7 +94,7 @@ Error logging:
 
 In `tldraw.py`:
 
-- The environment reads the fixed system prompt from `environments/tldraw/system_prompt.txt` before validation begins.
+- The environment reads the fixed system prompt from `environments/tldraw/system_prompt.py` before validation begins.
 - `render_and_score(...)`:
   - Parses model output JSON.
   - Extracts `actions`.
@@ -152,7 +152,7 @@ uv run playwright install
 ## Notes and troubleshooting
 
 - The validator page must be reachable before validation starts.
-- The environment expects a fixed system prompt at `environments/tldraw/system_prompt.txt`.
+- The environment expects a fixed system prompt at `environments/tldraw/system_prompt.py`.
 - Validation errors are surfaced in `state["render"]` and optionally persisted to JSONL.
 - If `validator_url` points to localhost, the environment will start a Vite dev server automatically.
 - Playwright requires an HTTP server, even if the app is built to static files.

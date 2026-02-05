@@ -1,15 +1,18 @@
 # tldraw
 
 ## Overview
+
 - **Environment ID**: `tldraw`
 - **Short description**: Single‑turn tool‑use environment that validates tldraw actions in a real UI using Playwright.
 - **Tags**: tldraw, tool-use, ui-validation
 
 ## Dataset
+
 - **Source**: Curated prompt list in `dataset.py` (`get_example_prompts`).
 - **Split sizes**: Small fixed set used for local evals.
 
 ## Task
+
 - **Type**: Single‑turn tool use
 - **Parser**: JSON extraction from model output
 - **Rubric**: Parses `actions`, runs them through the validator UI, and returns `reward=1` only when validation returns no errors.
@@ -26,15 +29,15 @@ prime eval run tldraw -m openai/gpt-4.1-mini -n 1 -r 1 \
 
 ## Environment Arguments
 
-| Arg | Type | Default | Description |
-| --- | ---- | ------- | ----------- |
-| `validator_url` | str | `"http://localhost:5173/validator.html"` | URL of the validator page. If localhost, the env auto‑starts the dev server. |
-| `pool_size` | int | `5` | Playwright page pool size. |
-| `headless` | bool | `True` | Run Chromium headless. |
-| `save_screenshots` | bool | `True` | Save screenshots for validation runs. |
-| `screenshot_dir` | str | `"outputs/screenshots"` | Where screenshots are written. |
-| `log_errors` | bool | `True` | Persist validation errors to JSONL. |
-| `error_log_dir` | str | `"outputs/errors"` | Where error logs are written. |
+| Arg                | Type | Default                                  | Description                                                                  |
+| ------------------ | ---- | ---------------------------------------- | ---------------------------------------------------------------------------- |
+| `validator_url`    | str  | `"http://localhost:5173/validator.html"` | URL of the validator page. If localhost, the env auto‑starts the dev server. |
+| `pool_size`        | int  | `5`                                      | Playwright page pool size.                                                   |
+| `headless`         | bool | `True`                                   | Run Chromium headless.                                                       |
+| `save_screenshots` | bool | `True`                                   | Save screenshots for validation runs.                                        |
+| `screenshot_dir`   | str  | `"outputs/screenshots"`                  | Where screenshots are written.                                               |
+| `log_errors`       | bool | `True`                                   | Persist validation errors to JSONL.                                          |
+| `error_log_dir`    | str  | `"outputs/errors"`                       | Where error logs are written.                                                |
 
 ## Bootstrap behavior
 
@@ -52,7 +55,7 @@ If `validator_url` points to a remote host, the environment will **not** start a
 The environment reads a fixed prompt from:
 
 ```
-./system_prompt.txt
+./system_prompt.py
 ```
 
 ## Outputs

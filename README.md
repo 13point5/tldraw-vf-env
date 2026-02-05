@@ -28,7 +28,7 @@ If `validator_url` points to a remote host, the environment will **not** start a
 The environment reads a fixed system prompt from:
 
 ```
-environments/tldraw/system_prompt.txt
+environments/tldraw/system_prompt.py
 ```
 
 ## Docker smoke test
