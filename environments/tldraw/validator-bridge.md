@@ -25,7 +25,7 @@ Core files:
 
 ## End-to-end flow
 
-1. Start the tldraw agent dev server. This serves `validator.html` at `http://localhost:5173/validator.html`.
+1. If `validator_url` points to localhost, the environment starts the tldraw agent dev server. This serves `validator.html` at `http://localhost:5173/validator.html`.
 2. The Verifiers environment starts Playwright and opens the validator page.
 3. The validator page exposes `window.__tldrawValidator` with methods: `reset`, `validate`, `getSystemPrompt`.
 4. The environment reads a fixed system prompt from `environments/tldraw/system_prompt.txt`.
@@ -154,7 +154,8 @@ uv run playwright install
 - The validator page must be reachable before validation starts.
 - The environment expects a fixed system prompt at `environments/tldraw/system_prompt.txt`.
 - Validation errors are surfaced in `state["render"]` and optionally persisted to JSONL.
-- The environment does not start the validator server; ensure your deployed app is available at `validator_url`.
+- If `validator_url` points to localhost, the environment will start a Vite dev server automatically.
+- Playwright requires an HTTP server, even if the app is built to static files.
 
 ## Extension points
 

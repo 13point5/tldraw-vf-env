@@ -1,51 +1,62 @@
 # tldraw
 
-> Replace the placeholders below, then remove this callout.
-
-### Overview
+## Overview
 - **Environment ID**: `tldraw`
-- **Short description**: <one-sentence description>
-- **Tags**: <comma-separated tags>
+- **Short description**: Single‑turn tool‑use environment that validates tldraw actions in a real UI using Playwright.
+- **Tags**: tldraw, tool-use, ui-validation
 
-### Datasets
-- **Primary dataset(s)**: <name(s) and brief description>
-- **Source links**: <links>
-- **Split sizes**: <train/eval counts>
+## Dataset
+- **Source**: Curated prompt list in `dataset.py` (`get_example_prompts`).
+- **Split sizes**: Small fixed set used for local evals.
 
-### Task
-- **Type**: <single-turn | multi-turn | tool use>
-- **Parser**: <e.g., ThinkParser, XMLParser, custom>
-- **Rubric overview**: <briefly list reward functions and key metrics>
+## Task
+- **Type**: Single‑turn tool use
+- **Parser**: JSON extraction from model output
+- **Rubric**: Parses `actions`, runs them through the validator UI, and returns `reward=1` only when validation returns no errors.
 
-### Quickstart
-Run an evaluation with default settings:
+## Quickstart
 
-```bash
-prime eval run tldraw
-```
-
-Configure model and sampling:
+Install and run an eval:
 
 ```bash
-prime eval run tldraw   -m gpt-4.1-mini   -n 20 -r 3 -t 1024 -T 0.7   -a '{"key": "value"}'  # env-specific args as JSON
+prime env install --path ./environments/tldraw
+prime eval run tldraw -m openai/gpt-4.1-mini -n 1 -r 1 \
+  -a '{"validator_url":"http://127.0.0.1:5173/validator.html","pool_size":1,"headless":true}'
 ```
 
-Notes:
-- Use `-a` / `--env-args` to pass environment-specific configuration as a JSON object.
-- Use `-n` / `--num-examples` to control how many dataset examples are evaluated.
-
-### Environment Arguments
-Document any supported environment arguments and their meaning. Example:
+## Environment Arguments
 
 | Arg | Type | Default | Description |
 | --- | ---- | ------- | ----------- |
-| `foo` | str | `"bar"` | What this controls |
-| `max_examples` | int | `-1` | Limit on dataset size (use -1 for all) |
+| `validator_url` | str | `"http://localhost:5173/validator.html"` | URL of the validator page. If localhost, the env auto‑starts the dev server. |
+| `pool_size` | int | `5` | Playwright page pool size. |
+| `headless` | bool | `True` | Run Chromium headless. |
+| `save_screenshots` | bool | `True` | Save screenshots for validation runs. |
+| `screenshot_dir` | str | `"outputs/screenshots"` | Where screenshots are written. |
+| `log_errors` | bool | `True` | Persist validation errors to JSONL. |
+| `error_log_dir` | str | `"outputs/errors"` | Where error logs are written. |
 
-### Metrics
-Summarize key metrics your rubric emits and how they’re interpreted.
+## Bootstrap behavior
 
-| Metric | Meaning |
-| ------ | ------- |
-| `reward` | Main scalar reward (weighted sum of criteria) |
-| `accuracy` | Exact match on target answer |
+When `validator_url` points to localhost, the environment will:
+
+- Install Node.js via `nvm` (Node 24)
+- Install JS dependencies in `tldraw-agent/`
+- Start the Vite dev server (serves `validator.html`)
+- Ensure Playwright Chromium is installed
+
+If `validator_url` points to a remote host, the environment will **not** start a server; the validator page must already be reachable.
+
+## System Prompt
+
+The environment reads a fixed prompt from:
+
+```
+./system_prompt.txt
+```
+
+## Outputs
+
+- Screenshots: `outputs/screenshots/`
+- Error logs: `outputs/errors/`
+- Validator logs: `outputs/validator/validator.log`

@@ -15,7 +15,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["tldraw.py", "pyproject.toml"]
+include = [
+    "tldraw.py",
+    "bootstrap_env.py",
+    "dataset.py",
+    "validator_client.py",
+    "system_prompt.txt",
+    "tldraw-agent/**",
+    "pyproject.toml",
+]
+exclude = [
+    "tldraw-agent/node_modules/**",
+    "tldraw-agent/dist/**",
+    "tldraw-agent/.vite/**",
+]
 
 [tool.verifiers.eval]
 num_examples = 5

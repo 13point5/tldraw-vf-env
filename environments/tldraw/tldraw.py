@@ -7,6 +7,13 @@ from typing import Any
 import verifiers as vf
 from datasets import Dataset
 from dataset import get_example_prompts
+from bootstrap_env import (
+    ensure_playwright_chromium,
+    ensure_node_via_nvm,
+    ensure_tldraw_agent_deps,
+    ensure_validator_server,
+    run_blocking,
+)
 from validator_client import ValidatorClient
 
 
@@ -123,6 +130,12 @@ def load_environment(
     prompts = get_example_prompts()
 
     dataset = Dataset.from_list([{"question": prompt} for prompt in prompts])
+
+    agent_dir = Path(__file__).resolve().parent / "tldraw-agent"
+    run_blocking(ensure_playwright_chromium)
+    run_blocking(ensure_node_via_nvm)
+    run_blocking(ensure_tldraw_agent_deps, agent_dir)
+    run_blocking(ensure_validator_server, validator_url, agent_dir, 60000)
 
     prompt_path = Path(__file__).resolve().parent / "system_prompt.txt"
     if not prompt_path.exists():

@@ -4,6 +4,19 @@ This starter kit demonstrates how to build an AI agent that can manipulate the [
 
 It features a chat panel on the right-hand-side of the screen where the user can communicate with the agent, add context and see chat history.
 
+## Validator harness (used by Verifiers)
+
+In this repo, the Verifiers environment uses this app as a **validator UI**. The environment loads `validator.html` via Playwright to validate action outputs.
+
+For local use:
+
+```bash
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+When the environment runs with a localhost `validator_url`, it will auto‑start this dev server. API keys are not required for validator‑only usage.
+
 ## Environment setup
 
 Create a `.dev.vars` file in the root directory and add API keys for any model providers you want to use.
@@ -18,9 +31,9 @@ We recommend using Anthropic for best results. Get your API key from the [Anthro
 
 ## Local development
 
-Install dependencies with `yarn` or `npm install`.
+Install dependencies with `npm install`.
 
-Run the development server with `yarn dev` or `npm run dev`.
+Run the development server with `npm run dev`.
 
 Open `http://localhost:5173/` in your browser to see the app.
 
