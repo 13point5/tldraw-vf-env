@@ -7,7 +7,6 @@ from typing import Any
 import verifiers as vf
 from datasets import Dataset
 from dataset import get_example_prompts
-from prompt_fetch import safe_fetch_system_prompt
 from validator_client import ValidatorClient
 
 
@@ -125,10 +124,13 @@ def load_environment(
 
     dataset = Dataset.from_list([{"question": prompt} for prompt in prompts])
 
-    system_prompt = safe_fetch_system_prompt(validator_url, 15000, headless)
-    prompt_path = Path("outputs/system_prompt.txt")
-    prompt_path.parent.mkdir(parents=True, exist_ok=True)
-    prompt_path.write_text(system_prompt, encoding="utf-8")
+    prompt_path = Path(__file__).resolve().parent / "system_prompt.txt"
+    if not prompt_path.exists():
+        raise RuntimeError(
+            "System prompt file not found at environments/tldraw/system_prompt.txt. "
+            "Provide a fixed system prompt file before running the environment."
+        )
+    system_prompt = prompt_path.read_text(encoding="utf-8")
 
     validator = ValidatorClient(
         url=validator_url,

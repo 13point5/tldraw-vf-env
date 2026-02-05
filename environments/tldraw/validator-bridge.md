@@ -28,7 +28,7 @@ Core files:
 1. Start the tldraw agent dev server. This serves `validator.html` at `http://localhost:5173/validator.html`.
 2. The Verifiers environment starts Playwright and opens the validator page.
 3. The validator page exposes `window.__tldrawValidator` with methods: `reset`, `validate`, `getSystemPrompt`.
-4. The environment fetches the system prompt directly from the page using a short-lived Playwright session.
+4. The environment reads a fixed system prompt from `environments/tldraw/system_prompt.txt`.
 5. For each model completion, the environment parses JSON and sends `actions` to `validate`.
 6. The validator applies actions through the real tldraw agent harness, renders shapes, and returns structured results.
 7. The rubric uses the validator response to decide success and logs images/errors to disk.
@@ -46,6 +46,7 @@ Defined in `client/validator/bridge.ts` and attached in `ValidatorApp.tsx`.
 
 - Returns the exact system prompt string used by the tldraw agent runtime.
 - Built with `buildSystemPrompt(...)`, so it stays aligned to any prompt-part or action-level additions.
+- Useful to generate and save the fixed `environments/tldraw/system_prompt.txt` used by the env.
 
 ### `window.__tldrawValidator.validate(actions, imageOptions?)`
 
@@ -93,7 +94,7 @@ Error logging:
 
 In `tldraw.py`:
 
-- `safe_fetch_system_prompt()` loads the validator page in a short-lived Playwright session to fetch the system prompt before validation begins.
+- The environment reads the fixed system prompt from `environments/tldraw/system_prompt.txt` before validation begins.
 - `render_and_score(...)`:
   - Parses model output JSON.
   - Extracts `actions`.
@@ -150,8 +151,8 @@ uv run playwright install
 
 ## Notes and troubleshooting
 
-- The validator page must be reachable before the Verifiers environment starts.
-- If system prompt fetch fails, environment load will fail.
+- The validator page must be reachable before validation starts.
+- The environment expects a fixed system prompt at `environments/tldraw/system_prompt.txt`.
 - Validation errors are surfaced in `state["render"]` and optionally persisted to JSONL.
 - The environment does not start the validator server; ensure your deployed app is available at `validator_url`.
 
