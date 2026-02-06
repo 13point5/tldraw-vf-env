@@ -1,0 +1,11 @@
+model = "PrimeIntellect/INTELLECT-3"
+max_steps = 21
+batch_size = 16
+rollouts_per_example = 16
+# With batch_size == rollouts_per_example, you get 1 prompt (example) per step.
+
+[sampling]
+max_tokens = 6000
+
+[[env]]
+id = "13point5/tldraw"
