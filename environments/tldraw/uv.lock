@@ -2473,6 +2473,8 @@ source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "playwright" },
+    { name = "python-dotenv" },
+    { name = "tqdm" },
     { name = "verifiers" },
 ]
 
@@ -2480,6 +2482,8 @@ dependencies = [
 requires-dist = [
     { name = "datasets", specifier = ">=2.0.0" },
     { name = "playwright", specifier = ">=1.43.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "tqdm", specifier = ">=4.67.2" },
     { name = "verifiers", specifier = ">=0.1.9.post3" },
 ]
 

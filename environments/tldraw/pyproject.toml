@@ -8,6 +8,8 @@ dependencies = [
     "verifiers>=0.1.9.post3",
     "playwright>=1.43.0",
     "datasets>=2.0.0",
+    "python-dotenv>=1.2.1",
+    "tqdm>=4.67.2",
 ]
 
 [build-system]
