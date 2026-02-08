@@ -2472,6 +2472,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
+    { name = "openai" },
     { name = "playwright" },
     { name = "python-dotenv" },
     { name = "tqdm" },
@@ -2481,6 +2482,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = ">=2.0.0" },
+    { name = "openai", specifier = ">=2.16.0" },
     { name = "playwright", specifier = ">=1.43.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "tqdm", specifier = ">=4.67.2" },

@@ -13,9 +13,9 @@ load_dotenv()
 # -----------------------------
 # Config
 # -----------------------------
-TOTAL_TASKS = 200
+TOTAL_TASKS = 7000
 CONCURRENCY = 20
-OUT_JSONL = "prompts.jsonl"
+OUT_JSONL = "prompts_7k.jsonl"
 MODEL = "gpt-4.1-mini"
 API_KEY = os.getenv("OPENAI_API_KEY", "")
 

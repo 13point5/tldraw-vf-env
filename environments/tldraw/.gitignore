@@ -1,1 +1,3 @@
 .env
+*.jsonl
+duplicate_reports/
