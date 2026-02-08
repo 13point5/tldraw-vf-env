@@ -5,8 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import verifiers as vf
-from datasets import Dataset
-from dataset import get_example_prompts
+from datasets import load_dataset
 from bootstrap_env import (
     ensure_playwright_chromium,
     ensure_node_via_nvm,
@@ -130,9 +129,21 @@ def load_environment(
     log_errors: bool = True,
     error_log_dir: str = "outputs/errors",
 ) -> vf.Environment:
-    prompts = get_example_prompts()
 
-    dataset = Dataset.from_list([{"question": prompt} for prompt in prompts])
+    dataset = load_dataset("13point5/tldraw-vf-env", split="train")
+
+    # convert prompt into an array with one user message object
+    dataset = dataset.map(lambda row: {"prompt": [{"role": "user", "content": row["prompt"]}]})
+
+    columns = dataset.column_names
+    dataset = dataset.map(lambda row: {"info": dict(row)})
+
+    columns_to_remove = [col for col in columns if col not in ["prompt", "info"]]
+    dataset = dataset.remove_columns(columns_to_remove)
+
+    split = dataset.train_test_split(test_size=0.2, seed=42, shuffle=True)
+    train_dataset = split["train"]
+    eval_dataset = split["test"]
 
     agent_dir = Path(__file__).resolve().parent / "tldraw-agent"
     run_blocking(ensure_playwright_chromium)
@@ -154,7 +165,8 @@ def load_environment(
     rubric.add_class_object("validator", validator)
 
     return vf.SingleTurnEnv(
-        dataset=dataset,
+        dataset=train_dataset,
+        eval_dataset=eval_dataset,
         rubric=rubric,
         system_prompt=SYSTEM_PROMPT,
     )
